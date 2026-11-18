@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIDORA - Video Platform</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f7f8fa;
+  color: #222;
+}
+
+header {
+  background: white;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: -1px;
+}
+
+.logo span {
+  color: #6965e9;
+}
+
+.search {
+  width: 55%;
+  max-width: 350px;
+  padding: 11px 15px;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  outline: none;
+}
+
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: 22px 15px;
+}
+
+h2 {
+  font-size: 22px;
+}
+
+.categories {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  padding: 12px 0 20px;
+}
+
+.category {
+  border: 0;
+  padding: 10px 17px;
+  background: white;
+  border-radius: 25px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.category.active {
+  background: #6965e9;
+  color: white;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.thumb {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #ececff;
+  font-size: 42px;
+}
+
+.info {
+  padding: 12px;
+}
+
+.info h3 {
+  font-size: 14px;
+  margin: 0 0 7px;
+}
+
+.info p {
+  color: #888;
+  font-size: 12px;
+  margin: 0;
+}
+
+.player {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.9);
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+}
+
+.player-box {
+  background: white;
+  width: 100%;
+  max-width: 700px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+video {
+  width: 100%;
+  display: block;
+  background: black;
+}
+
+.player-info {
+  padding: 15px;
+}
+
+.close {
+  float: right;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 20px;
+}
+
+footer {
+  text-align: center;
+  padding: 35px;
+  color: #888;
+  font-size: 12px;
+}
+
+@media(min-width: 750px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">VIDO<span>RA</span></div>
+
+  <input
+    class="search"
+    id="search"
+    placeholder="ค้นหาวิดีโอ..."
+    oninput="render()"
+  >
+</header>
+
+<main>
+
+  <h2>ค้นพบวิดีโอ</h2>
+  <p style="color:#888">Discover something new.</p>
+
+  <div class="categories">
+    <button class="category active"
+      onclick="filter('ทั้งหมด',this)">ทั้งหมด</button>
+
+    <button class="category"
+      onclick="filter('ธรรมชาติ',this)">ธรรมชาติ</button>
+
+    <button class="category"
+      onclick="filter('ความรู้',this)">ความรู้</button>
+
+    <button class="category"
+      onclick="filter('บันเทิง',this)">บันเทิง</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+</main>
+
+<div class="player" id="player">
+  <div class="player-box">
+    <video id="video" controls playsinline></video>
+    <div class="player-info">
+      <button class="close" onclick="closePlayer()">ปิด</button>
+      <h3 id="title"></h3>
+      <p>VIDORA Video Player</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  VIDORA © 2026
+  <p>Discover. Watch. Enjoy.</p>
+</footer>
+
+<script>
+const sample =
+"https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+
+const videos = [
+  {name:"ดอกไม้และธรรมชาติ",cat:"ธรรมชาติ",icon:"🌸"},
+  {name:"เรียนรู้โลกของเรา",cat:"ความรู้",icon:"🌍"},
+  {name:"ฤดูใบไม้ผลิ",cat:"ธรรมชาติ",icon:"🌿"},
+  {name:"โลกแห่งภาพยนตร์",cat:"บันเทิง",icon:"🎬"},
+  {name:"สิ่งมีชีวิตมหัศจรรย์",cat:"ความรู้",icon:"🦋"},
+  {name:"ช่วงเวลาแสนสงบ",cat:"ธรรมชาติ",icon:"🌼"}
+];
+
+let selected = "ทั้งหมด";
+
+function render() {
+  const query = document
+    .getElementById("search").value.toLowerCase();
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  const result = videos.filter(v =>
+    v.name.toLowerCase().includes(query) &&
+    (selected === "ทั้งหมด" || v.cat === selected)
+  );
+
+  result.forEach(v => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const thumb = document.createElement("div");
+    thumb.className = "thumb";
+    thumb.textContent = v.icon;
+
+    const info = document.createElement("div");
+    info.className = "info";
+
+    const name = document.createElement("h3");
+    name.textContent = v.name;
+
+    const category = document.createElement("p");
+    category.textContent = v.cat;
+
+    info.append(name, category);
+    card.append(thumb, info);
+
+    card.onclick = () => openPlayer(v.name);
+    grid.appendChild(card);
+  });
+
+  if (!result.length) {
+    grid.textContent = "ไม่พบวิดีโอ";
+  }
+}
+
+function filter(category, button) {
+  selected = category;
+
+  document.querySelectorAll(".category")
+    .forEach(b => b.classList.remove("active"));
+
+  button.classList.add("active");
+  render();
+}
+
+function openPlayer(name) {
+  const player = document.getElementById("video");
+
+  document.getElementById("title").textContent = name;
+  player.src = sample;
+
+  document.getElementById("player").style.display = "flex";
+  player.play().catch(() => {});
+}
+
+function closePlayer() {
+  const player = document.getElementById("video");
+
+  player.pause();
+  player.removeAttribute("src");
+  player.load();
+
+  document.getElementById("player").style.display = "none";
+}
+
+render();
+</script>
+
+</body>
+</html>
